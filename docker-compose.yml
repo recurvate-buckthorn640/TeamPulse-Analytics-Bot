@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    command: uvicorn src.app.main:create_app --factory --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/postgres
+      REDIS_URL: redis://redis:6379/0
+      TELEGRAM_BOT_TOKEN: changeme
+      LLM_API_KEY: changeme
+      OWNER_TELEGRAM_USER_ID: "1"
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+
+  worker:
+    build: .
+    command: celery -A src.workers.celery_app.celery_app worker -l info
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/postgres
+      REDIS_URL: redis://redis:6379/0
+      TELEGRAM_BOT_TOKEN: changeme
+      LLM_API_KEY: changeme
+      OWNER_TELEGRAM_USER_ID: "1"
+    depends_on:
+      - db
+      - redis
+
+  beat:
+    build: .
+    command: celery -A src.workers.celery_app.celery_app beat -l info
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/postgres
+      REDIS_URL: redis://redis:6379/0
+      TELEGRAM_BOT_TOKEN: changeme
+      LLM_API_KEY: changeme
+      OWNER_TELEGRAM_USER_ID: "1"
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+version: "3.9"
+
+services:
+  api:
+    build: .
+    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - OWNER_TELEGRAM_USER_ID=${OWNER_TELEGRAM_USER_ID}
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: .
+    command: celery -A src.workers.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - OWNER_TELEGRAM_USER_ID=${OWNER_TELEGRAM_USER_ID}
+    depends_on:
+      - db
+      - redis
+
+  beat:
+    build: .
+    command: celery -A src.workers.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - OWNER_TELEGRAM_USER_ID=${OWNER_TELEGRAM_USER_ID}
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-team_analytics}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
