@@ -4,6 +4,8 @@ Backend-only Telegram analytics bot that ingests team chats, computes determinis
 
 This repository implements the MVP described in `specs/001-team-communication-analytics/` (spec, plan, data model, contracts, tasks).
 
+**Topics:** `telegram-bot` `communication-analytics` `team-analytics` `ai-bot` `llm` `chat-analytics` `team-productivity` `conversation-analysis` `nlp` `python` `openai` `analytics` `telegram-analytics` `team-insights`
+
 ---
 
 ## 1. High-level Features
